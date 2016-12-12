@@ -2,6 +2,7 @@ import DataTransformation._
 import org.apache.log4j.{Level, Logger}
 import org.scalatest._
 import org.apache.spark.sql.functions._
+import Udfs._
 
 class DataLoadingAndConversionTests extends FlatSpec with Matchers with BeforeAndAfter {
 
@@ -16,11 +17,9 @@ class DataLoadingAndConversionTests extends FlatSpec with Matchers with BeforeAn
 
   // http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-complete.csv
   it should "Transform CSV house price data to Parquet" in {
-    val getDate = udf((s: String) => {s.substring(0, 7)})
-
     val housePrices =
       readCsvData(housePriceCsv)
-      .withColumn("month", getDate(col("date")))
+        .withColumn("month", withDate(col("date")))
     housePrices.printSchema()
     housePrices.show()
     writeParquet(housePriceParquet, housePrices)

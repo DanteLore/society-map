@@ -1,21 +1,44 @@
 import Spark._
 import org.apache.log4j.{Level, Logger}
 import org.scalatest._
+import org.apache.spark.sql.functions._
+import Udfs._
 
-class JoinByPostcodeTests extends FlatSpec with Matchers with BeforeAndAfter {
+class JoinHousePriceToCrime extends FlatSpec with Matchers with BeforeAndAfter {
 
   val crimeParquet = "/Users/DTAYLOR/Data/crime/parquet/street_crime.parquet"
   val postcodeParquet = "/Users/DTAYLOR/Data/postcode/parquet"
   val housePriceParquet = "/Users/DTAYLOR/Data/house_price/parquet"
 
+
   it should "show crimes by postcode" in {
-    val crimeLocations = spark.sql("select distinct(latitude, longitude) from crime")
-    spark.sql("select * from crime").show()
-    spark.sql("select month, crime_type, latitude, longitude, count(*) from crime group by month, latitude, longitude, crime_type").show()
+    // If postcodes don't work - try GeoHashes!
 
-    // WORK IN PROGRESS!
+    spark
+      .sql("select * from crime")
+      .withColumn("geohash", withGeoHash(8)(col("latitude"), col("longitude")))
+      .groupBy("geohash")
+      .agg(count("*") as "crime_count")
+      .createOrReplaceTempView("crime_by_geohash")
 
-    // Joining here is hard - because there is no relationship between the lat-long of a crime and the lat-long of a postcode :(
+    spark.sql("select * from postcodes")
+      .withColumn("geohash", withGeoHash(8)(col("latitude"), col("longitude")))
+      .createOrReplaceTempView("postcode_with_geohash")
+
+    val crimeByGeoHash = spark.sql("select * from crime_by_geohash c join postcode_with_geohash p on (c.geohash == p.geohash)")
+
+    crimeByGeoHash.printSchema()
+    crimeByGeoHash.show()
+  }
+
+  val crime_types = Seq("Possession of weapons", "Theft from the person", "Criminal damage and arson", "Other theft",
+    "Shoplifting", "Anti-social behaviour", "Public disorder and weapons", "Violence and sexual offences",
+    "Burglary", "Vehicle crime", "Drugs", "Bicycle theft", "Violent crime", "Robbery", "Other crime", "Public order")
+
+  it should "fetch the distinct crime types" in {
+    spark.sql("select distinct(crime_type) from crime")
+      .collect()
+      .foreach(println)
   }
 
   it should "Count the number of distinct crime locations and postcodes" in {
