@@ -9,7 +9,7 @@ object DataTransformation {
       renameFields(df.withColumnRenamed(field, safeName), tail)
   }
 
-  def convertCsvToParquet(inputData: String, outputData: String): DataFrame = {
+  def readCsvData(inputData: String) : DataFrame = {
     val csvData = spark
       .read
       .format("com.databricks.spark.csv")
@@ -18,11 +18,11 @@ object DataTransformation {
       .load(inputData)
       .toDF()
 
-    val data = renameFields(csvData, csvData.schema.fieldNames.toList)
+    renameFields(csvData, csvData.schema.fieldNames.toList)
+  }
 
-    scalax.file.Path.fromString(outputData).deleteRecursively()
-    data.write.format("parquet").save(outputData)
-
-    data
+  def writeParquet(outputFilename : String, data : DataFrame):Unit = {
+    scalax.file.Path.fromString(outputFilename).deleteRecursively()
+    data.write.format("parquet").save(outputFilename)
   }
 }
