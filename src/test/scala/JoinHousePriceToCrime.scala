@@ -10,22 +10,34 @@ class JoinHousePriceToCrime extends FlatSpec with Matchers with BeforeAndAfter {
   val postcodeParquet = "/Users/DTAYLOR/Data/postcode/parquet"
   val housePriceParquet = "/Users/DTAYLOR/Data/house_price/parquet"
 
+  it should "count crimes" in {
+    spark.sql("select count(*) from crime").collect().foreach(println)
+  }
+
+  it should "show max date on house price data" in {
+    spark.sql("select max(date), count(*) from house_prices").collect().foreach(println)
+  }
+
+  it should "most expensive town from house price data" in {
+    spark.sql("select town, avg(price) as price from house_prices group by town order by price desc").collect().foreach(println)
+  }
 
   it should "show crimes by postcode" in {
     // If postcodes don't work - try GeoHashes!
+    val geoHashPrecision = 7
 
     spark
       .sql("select * from crime")
-      .withColumn("geohash", withGeoHash(8)(col("latitude"), col("longitude")))
+      .withColumn("geohash", withGeoHash(geoHashPrecision)(col("latitude"), col("longitude")))
       .groupBy("geohash")
       .agg(count("*") as "crime_count")
       .createOrReplaceTempView("crime_by_geohash")
 
     spark.sql("select * from postcodes")
-      .withColumn("geohash", withGeoHash(8)(col("latitude"), col("longitude")))
+      .withColumn("geohash", withGeoHash(geoHashPrecision)(col("latitude"), col("longitude")))
       .createOrReplaceTempView("postcode_with_geohash")
 
-    val crimeByGeoHash = spark.sql("select * from crime_by_geohash c join postcode_with_geohash p on (c.geohash == p.geohash)")
+    val crimeByGeoHash = spark.sql("select * from crime_by_geohash c left outer join postcode_with_geohash p on (c.geohash == p.geohash)")
 
     crimeByGeoHash.printSchema()
     crimeByGeoHash.show()

@@ -12,8 +12,19 @@ class DataLoadingAndConversionTests extends FlatSpec with Matchers with BeforeAn
   val postcodeCsv = "/Users/DTAYLOR/Data/postcode/*.csv"
   val postcodeParquet = "/Users/DTAYLOR/Data/postcode/parquet"
 
-  val housePriceCsv = "/Users/DTAYLOR/Data/house_price/*.csv"
+  val housePriceCsv = "/Users/DTAYLOR/Data/house_price/price-paid.csv"
   val housePriceParquet = "/Users/DTAYLOR/Data/house_price/parquet"
+  val housePriceJson = "/Users/DTAYLOR/Data/house_price/json"
+
+  // http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-complete.csv
+  it should "Transform CSV house price data to JSON" in {
+    val housePrices =
+      readCsvData(housePriceCsv)
+        .withColumn("month", withDate(col("date")))
+    housePrices.printSchema()
+    housePrices.show()
+    writeJson(housePriceJson, housePrices)
+  }
 
   // http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-complete.csv
   it should "Transform CSV house price data to Parquet" in {

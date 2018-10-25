@@ -25,4 +25,9 @@ object DataTransformation {
     scalax.file.Path.fromString(outputFilename).deleteRecursively()
     data.write.format("parquet").save(outputFilename)
   }
+
+  def writeJson(outputFilename : String, data : DataFrame):Unit = {
+    scalax.file.Path.fromString(outputFilename).deleteRecursively()
+    data.write.format("json").save(outputFilename)
+  }
 }
